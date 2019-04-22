@@ -1,69 +1,87 @@
-##
- #  @filename   :   main.cpp
- #  @brief      :   2.9inch e-paper display (B) demo
- #  @author     :   Yehui from Waveshare
- #
- #  Copyright (C) Waveshare     July 24 2017
- #
- # Permission is hereby granted, free of charge, to any person obtaining a copy
- # of this software and associated documnetation files (the "Software"), to deal
- # in the Software without restriction, including without limitation the rights
- # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- # copies of the Software, and to permit persons to  whom the Software is
- # furished to do so, subject to the following conditions:
- #
- # The above copyright notice and this permission notice shall be included in
- # all copies or substantial portions of the Software.
- #
- # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- # FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- # LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- # THE SOFTWARE.
- ##
+import time
+import spidev as SPI
+import datetime
+import includes.waveshare as logo
+from includes.epd import Epd
+from includes.progressbar import ProgressBar
 
-import epd2in9b
-import Image
-import ImageFont
-import ImageDraw
-#import imagedata
+# Possible displays
+DISPLAY_TYPE = "EPD_2X9"
+# DISPLAY_TYPE = "EPD_2X13"
+# DISPLAY_TYPE = "EPD_1X54"
 
-COLORED = 1
-UNCOLORED = 0
+# Select fitting logo
+if DISPLAY_TYPE == "EPD_2X9":
+  waveshare = logo.waveshare_128x296
+elif DISPLAY_TYPE == "EPD_2X13":
+  waveshare = logo.waveshare_122x250
+elif DISPLAY_TYPE == "EPD_1X54":
+  waveshare = logo.waveshare_200x200
+else:
+  raise "Unsupported display!"
 
-def main():
-    epd = epd2in9b.EPD()
-    epd.init()
+# Circle
+circle3232 = [
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE0, 0x3F, 0xFF, 0xFF, 0x80, 0x07, 0xFF, 
+  0xFE, 0x00, 0x03, 0xFF, 0xFC, 0x00, 0x01, 0xFF, 0xF8, 0x00, 0x00, 0x7F, 0xF0, 0x0F, 0x80, 0x7F, 
+  0xE0, 0x3F, 0xE0, 0x3F, 0xE0, 0x7F, 0xF0, 0x1F, 0xC0, 0xFF, 0xF8, 0x1F, 0xC1, 0xFF, 0xFC, 0x1F, 
+  0x81, 0xFF, 0xFC, 0x0F, 0x83, 0xFF, 0xFE, 0x0F, 0x83, 0xFF, 0xFE, 0x0F, 0x83, 0xFF, 0xFE, 0x0F, 
+  0x83, 0xFF, 0xFE, 0x0F, 0x83, 0xFF, 0xFE, 0x0F, 0x81, 0xFF, 0xFC, 0x0F, 0xC1, 0xFF, 0xFC, 0x1F, 
+  0xC0, 0xFF, 0xF8, 0x1F, 0xC0, 0x7F, 0xF8, 0x1F, 0xE0, 0x3F, 0xE0, 0x3F, 0xF0, 0x0F, 0x80, 0x7F, 
+  0xF8, 0x00, 0x00, 0x7F, 0xF8, 0x00, 0x00, 0xFF, 0xFE, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0x07, 0xFF, 
+  0xFF, 0xE0, 0x3F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+]
 
-    # clear the frame buffer
-    frame_black = [0xFF] * (epd.width * epd.height / 8)
-    frame_red = [0xFF] * (epd.width * epd.height / 8)
+# Line
+line3232 = [
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+  0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 
+]
 
-    # For simplicity, the arguments are explicit numerical coordinates
-    epd.draw_rectangle(frame_black, 10, 80, 50, 140, COLORED);
-    epd.draw_line(frame_black, 10, 80, 50, 140, COLORED);
-    epd.draw_line(frame_black, 50, 80, 10, 140, COLORED);
-    epd.draw_circle(frame_black, 90, 110, 30, COLORED);
-    epd.draw_filled_rectangle(frame_red, 10, 180, 50, 240, COLORED);
-    epd.draw_filled_rectangle(frame_red, 0, 6, 128, 26, COLORED);
-    epd.draw_filled_circle(frame_red, 90, 210, 30, COLORED);
+bus = 32766
+device = 0
 
-    # write strings to the buffer
-    font = ImageFont.truetype('/usr/share/fonts/truetype/freefont/FreeMono.ttf', 16)
-    epd.draw_string_at(frame_black, 4, 30, "e-Paper Demo", font, COLORED)
-    epd.draw_string_at(frame_red, 6, 10, "Hello world!", font, UNCOLORED)
-    # display the frames
-    epd.display_frame(frame_black, frame_red)
+spi = SPI.SpiDev(bus, device)
+display = Epd(spi, DISPLAY_TYPE)
 
-    # display images
-    frame_black = epd.get_frame_buffer(Image.open('black.bmp'))
-    frame_red = epd.get_frame_buffer(Image.open('red.bmp'))
-    epd.display_frame(frame_black, frame_red)
+print('--> Init and clear full screen')
+display.clearDisplayFull()
 
-    # You can get frame buffer from an image or import the buffer directly:
-    #epd.display_frame(imagedata.IMAGE_BLACK, imagedata.IMAGE_RED)
+# Show full pic
+print('--> Show waveshare logo')
+display.showImageFull(waveshare)
+time.sleep(2)
 
-if __name__ == '__main__':
-    main()
+# Init and clear part screen
+print('--> Init and clear part screen')
+display.clearDisplayPart()
+
+# Show part inage
+print('--> Show part of an image (logo)')
+display.showImagePart(0, display.xDot-1, 0, display.yDot-1, waveshare)
+time.sleep(2)
+
+# Show image with size
+print('--> Show circle and line')
+display.showImage((display.yDot-32)/8-2, 0, circle3232, 32, 32) # Circle
+display.showImage((display.yDot-32)/8-2, 4, line3232, 32, 32) # Line
+time.sleep(2)
+
+# String
+print('--> Show strings')
+display.showString(0, 10, "WELCOME EPD", "Font16")
+display.showString(0, 26, "I am an electronic paper display", "Font12")
+time.sleep(1)
+
+# Progress bar
+print('--> Show progress bar')
+progress = ProgressBar(display, 10)
+for i in range(0, 10):
+  progress.showProgress(i)
+
